@@ -1,0 +1,22 @@
+<table class="table table-bordered">
+    <thead>
+        <tr>
+            <th></th>
+            <th>Título</th>
+            <th>Duração</th>
+            <th>Desde</th>
+            <th>Visualizações</th>
+            <th></th>
+        </tr>
+    </thead>
+    <tbody>
+        <tr ng-repeat="video in videos" class="repeated-item">
+            <td ><img ng-src="{{ video.tumbnail.src }}"></td>
+            <td ng-bind="video.title"></td>
+            <td ng-bind="video.duration"></td>
+            <td ng-bind="video.since"></td>
+            <td ng-bind="video.views"></td>
+            <td><button ng-click="download(video.url, video.title)" class="btn btn-primary">Download</button></td>
+        </tr>
+    </tbody>
+</table>
