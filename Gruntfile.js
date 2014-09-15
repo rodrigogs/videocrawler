@@ -1,4 +1,4 @@
-// Generated on 2014-09-09 using generator-angular 0.9.8
+// Generated on 2014-09-10 using generator-angular 0.9.8
 'use strict';
 
 // # Globbing
@@ -26,6 +26,17 @@ module.exports = function (grunt) {
 
     // Project settings
     yeoman: appConfig,
+    
+    express: {
+      options: {
+        port: 4000
+      },
+      web: {
+        options: {
+          script: 'server/app.js',
+        }
+      },
+    },
 
     // Watches files for changes and runs tasks based on the changed files
     watch: {
@@ -44,9 +55,9 @@ module.exports = function (grunt) {
         files: ['test/spec/{,*/}*.js'],
         tasks: ['newer:jshint:test', 'karma']
       },
-      compass: {
-        files: ['<%= yeoman.app %>/styles/{,*/}*.{scss,sass}'],
-        tasks: ['compass:server', 'autoprefixer']
+      styles: {
+        files: ['<%= yeoman.app %>/styles/{,*/}*.css'],
+        tasks: ['newer:copy:styles', 'autoprefixer']
       },
       gruntfile: {
         files: ['Gruntfile.js']
@@ -60,15 +71,28 @@ module.exports = function (grunt) {
           '.tmp/styles/{,*/}*.css',
           '<%= yeoman.app %>/images/{,*/}*.{png,jpg,jpeg,gif,webp,svg}'
         ]
+      },
+      
+      web: {
+        files: [
+          'server/**/*.js'
+        ],
+        tasks: [
+          'express:web'
+        ],
+        options: {
+          nospawn: true, //Without this option specified express won't be reloaded
+          atBegin: true,
+        }
       }
     },
 
     // The actual grunt server settings
     connect: {
       options: {
-        port: 9000,
+        port: process.env.PORT || 9000,
         // Change this to '0.0.0.0' to access the server from outside.
-        hostname: 'localhost',
+        hostname: process.env.IP || '0.0.0.0',
         livereload: 35729
       },
       livereload: {
@@ -76,6 +100,9 @@ module.exports = function (grunt) {
           open: true,
           middleware: function (connect) {
             return [
+              // Express api
+              require('connect-modrewrite')(['^/api http://localhost:4000/api [P L]']),
+              
               connect.static('.tmp'),
               connect().use(
                 '/bower_components',
@@ -165,39 +192,6 @@ module.exports = function (grunt) {
       app: {
         src: ['<%= yeoman.app %>/index.html'],
         ignorePath:  /\.\.\//
-      },
-      sass: {
-        src: ['<%= yeoman.app %>/styles/{,*/}*.{scss,sass}'],
-        ignorePath: /(\.\.\/){1,2}bower_components\//
-      }
-    },
-
-    // Compiles Sass to CSS and generates necessary files if requested
-    compass: {
-      options: {
-        sassDir: '<%= yeoman.app %>/styles',
-        cssDir: '.tmp/styles',
-        generatedImagesDir: '.tmp/images/generated',
-        imagesDir: '<%= yeoman.app %>/images',
-        javascriptsDir: '<%= yeoman.app %>/scripts',
-        fontsDir: '<%= yeoman.app %>/styles/fonts',
-        importPath: './bower_components',
-        httpImagesPath: '/images',
-        httpGeneratedImagesPath: '/images/generated',
-        httpFontsPath: '/styles/fonts',
-        relativeAssets: false,
-        assetCacheBuster: false,
-        raw: 'Sass::Script::Number.precision = 10\n'
-      },
-      dist: {
-        options: {
-          generatedImagesDir: '<%= yeoman.dist %>/images/generated'
-        }
-      },
-      server: {
-        options: {
-          debugInfo: true
-        }
       }
     },
 
@@ -350,8 +344,8 @@ module.exports = function (grunt) {
           src: ['generated/*']
         }, {
           expand: true,
-          cwd: '.',
-          src: 'bower_components/bootstrap-sass-official/assets/fonts/bootstrap/*',
+          cwd: 'bower_components/bootstrap/dist',
+          src: 'fonts/*',
           dest: '<%= yeoman.dist %>'
         }]
       },
@@ -366,13 +360,13 @@ module.exports = function (grunt) {
     // Run some tasks in parallel to speed up the build process
     concurrent: {
       server: [
-        'compass:server'
+        'copy:styles'
       ],
       test: [
-        'compass'
+        'copy:styles'
       ],
       dist: [
-        'compass:dist',
+        'copy:styles',
         'imagemin',
         'svgmin'
       ]
@@ -384,6 +378,36 @@ module.exports = function (grunt) {
         configFile: 'test/karma.conf.js',
         singleRun: true
       }
+    },
+    
+    parallel: {
+      web: {
+        options: {
+          stream: true
+        },
+        tasks: [{
+          grunt: true,
+          args: ['watch:bower']
+        }, {
+          grunt: true,
+          args: ['watch:js']
+        }, {
+          grunt: true,
+          args: ['watch:jsTest']
+        }, {
+          grunt: true,
+          args: ['watch:styles']
+        }, {
+          grunt: true,
+          args: ['watch:gruntfile']
+        }, {
+          grunt: true,
+          args: ['watch:livereload']
+        }, {
+          grunt: true,
+          args: ['watch:web']
+        }]
+      },
     }
   });
 
@@ -432,10 +456,15 @@ module.exports = function (grunt) {
     'usemin',
     'htmlmin'
   ]);
+  
+  grunt.registerTask('web', 'launch webserver and watch tasks', [
+    'parallel:web',
+  ]);
 
   grunt.registerTask('default', [
     'newer:jshint',
     'test',
-    'build'
+    'build',
+    'web'
   ]);
 };
